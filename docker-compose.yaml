@@ -2,18 +2,107 @@ include:
   - compose/docker-compose.infra.yaml # DO NOT REMOVE; backups + monitoring
   - compose/docker-compose.proxy.yaml # OPTIONAL; traefik + cloudflare tunnel
 services:
-  #######
-  # App #
-  #######
-  example:
-    image: traefik/whoami:v1.11.0
-    user: "1000:1000"
-    restart: unless-stopped
-    volumes:
-      - ./volumes/example-volume:/example
+  ghost:
+    image: ghost:6.8.0
+    restart: always
     labels:
       # Point Cloudflare Tunnel to this service via Traefik
       - traefik.enable=true
       - traefik.http.routers.example.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`)
       - traefik.http.routers.example.entrypoints=web
-      - traefik.http.services.example.loadbalancer.server.port=80   # change to your service's HTTP port
+      - traefik.http.services.example.loadbalancer.server.port=2368   # change to your service's HTTP port
+    environment:
+      NODE_ENV: production
+      url: https://${APP_SHORTNAME}.{CLOUDFLARE_DOMAIN}
+      database__client: mysql
+      database__connection__host: db
+      database__connection__user: ${DATABASE_USER:-ghost}
+      database__connection__password: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
+      database__connection__database: ghost
+    volumes:
+      - ./volumes/ghost:/var/lib/ghost/content
+    depends_on:
+      db:
+        condition: service_healthy
+      tinybird-sync:
+        condition: service_completed_successfully
+        required: false
+      tinybird-deploy:
+        condition: service_completed_successfully
+        required: false
+      activitypub:
+        condition: service_started
+        required: false
+    networks:
+      - ghost_network
+      - default
+
+  db:
+    image: mysql:8.0.44
+    restart: always
+    expose:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD:?DATABASE_ROOT_PASSWORD environment variable is required}
+      MYSQL_USER: ${DATABASE_USER:-ghost}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
+      MYSQL_DATABASE: ghost
+      MYSQL_MULTIPLE_DATABASES: activitypub
+    volumes:
+      - ./volumes/mysql:/var/lib/mysql
+      - ./volumes/mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: mysqladmin ping -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1
+      interval: 1s
+      start_period: 30s
+      start_interval: 10s
+      retries: 120
+    networks:
+      - ghost_network
+
+  activitypub:
+    image: ghcr.io/tryghost/activitypub:1.1.0
+    restart: always
+    expose:
+      - "8080"
+    volumes:
+      - ./volumes/ghost:/opt/activitypub/content
+    environment:
+      # See https://github.com/TryGhost/ActivityPub/blob/main/docs/env-vars.md
+      NODE_ENV: production
+      MYSQL_HOST: db
+      MYSQL_USER: ${DATABASE_USER:-ghost}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
+      MYSQL_DATABASE: activitypub
+      LOCAL_STORAGE_PATH: /opt/activitypub/content/images/activitypub
+      LOCAL_STORAGE_HOSTING_URL: https://${DOMAIN}/content/images/activitypub
+    depends_on:
+      db:
+        condition: service_healthy
+      activitypub-migrate:
+        condition: service_completed_successfully
+    networks:
+      - ghost_network
+
+  # Supporting Services
+
+  activitypub-migrate:
+    image: ghcr.io/tryghost/activitypub-migrations:1.1.0
+    environment:
+      MYSQL_DB: mysql://${DATABASE_USER:-ghost}:${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}@tcp(db:3306)/activitypub
+    networks:
+      - ghost_network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: no
+
+volumes:
+  caddy_data:
+  caddy_config:
+  tinybird_files:
+  tinybird_home:
+  traffic_analytics_data:
+
+networks:
+  ghost_network:
