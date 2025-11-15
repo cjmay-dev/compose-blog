@@ -24,12 +24,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      tinybird-sync:
-        condition: service_completed_successfully
-        required: false
-      tinybird-deploy:
-        condition: service_completed_successfully
-        required: false
       activitypub:
         condition: service_started
         required: false
@@ -75,7 +69,7 @@ services:
       MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
       MYSQL_DATABASE: activitypub
       LOCAL_STORAGE_PATH: /opt/activitypub/content/images/activitypub
-      LOCAL_STORAGE_HOSTING_URL: https://${DOMAIN}/content/images/activitypub
+      LOCAL_STORAGE_HOSTING_URL: https://${APP_SHORTNAME}.{CLOUDFLARE_DOMAIN}/content/images/activitypub
     depends_on:
       db:
         condition: service_healthy
