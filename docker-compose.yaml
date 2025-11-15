@@ -50,7 +50,7 @@ services:
       MYSQL_MULTIPLE_DATABASES: activitypub
     volumes:
       - ./volumes/mysql:/var/lib/mysql
-      - ./volumes/mysql-init:/docker-entrypoint-initdb.d
+      - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: mysqladmin ping -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1
       interval: 1s
@@ -96,13 +96,6 @@ services:
       db:
         condition: service_healthy
     restart: no
-
-volumes:
-  caddy_data:
-  caddy_config:
-  tinybird_files:
-  tinybird_home:
-  traffic_analytics_data:
 
 networks:
   ghost_network:
