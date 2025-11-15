@@ -13,7 +13,7 @@ services:
       - traefik.http.services.example.loadbalancer.server.port=2368   # change to your service's HTTP port
     environment:
       NODE_ENV: production
-      url: https://${APP_SHORTNAME}.{CLOUDFLARE_DOMAIN}
+      url: https://${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}
       database__client: mysql
       database__connection__host: db
       database__connection__user: ${DATABASE_USER:-ghost}
@@ -69,7 +69,7 @@ services:
       MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
       MYSQL_DATABASE: activitypub
       LOCAL_STORAGE_PATH: /opt/activitypub/content/images/activitypub
-      LOCAL_STORAGE_HOSTING_URL: https://${APP_SHORTNAME}.{CLOUDFLARE_DOMAIN}/content/images/activitypub
+      LOCAL_STORAGE_HOSTING_URL: https://${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}/content/images/activitypub
     depends_on:
       db:
         condition: service_healthy
