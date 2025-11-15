@@ -1,0 +1,33 @@
+# ide
+.vscode
+
+# variables, secrets
+secrets/
+*.env
+*.env.local
+*.tfvars
+
+# temp
+tmp
+
+# Python virtual environment
+venv
+
+# Infisical
+.infisical.json
+.infisical_workspace
+
+# Ansible
+ansible/inventory.ini
+ansible_ssh_private_key
+
+# terraform
+.terraform
+.terraform.tfstate*
+terraform.tfstate*
+backend.tf
+*_override.tf
+plan.out
+
+# container volumes
+volumes/

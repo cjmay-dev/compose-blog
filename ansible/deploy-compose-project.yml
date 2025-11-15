@@ -1,0 +1,31 @@
+---
+- name: Deploy docker compose project
+  hosts: docker_host
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Pull git repository
+      ansible.builtin.git:
+        repo: https://github.com/{{ lookup('env', 'GITHUB_REPOSITORY') }}
+        dest: /opt/app
+        version: main
+        update: yes
+        force: yes
+
+    - name: Lock app directory permissions
+      file:
+        path: /opt/app
+        state: directory
+        mode: '0700'
+
+    - name: Deploy docker compose project
+      shell: |
+        cd /opt/app
+        export INFISICAL_TOKEN=$(infisical login --method oidc-auth --silent --plain)
+        infisical run --projectId $INFISICAL_PROJECT_ID --env $ENVIRONMENT -- make compose
+      environment:
+        INFISICAL_API_URL: "{{ lookup('env', 'INFISICAL_API_URL') }}"
+        INFISICAL_JWT: "{{ lookup('env', 'INFISICAL_AUTH_JWT') }}"
+        INFISICAL_MACHINE_IDENTITY_ID: "{{ lookup('env', 'INFISICAL_MACHINE_IDENTITY_ID') }}"
+        INFISICAL_PROJECT_ID: "{{ lookup('env', 'INFISICAL_PROJECT_ID') }}"
+        ENVIRONMENT: "{{ lookup('env', 'ENVIRONMENT') }}"

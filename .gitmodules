@@ -1,0 +1,9 @@
+[submodule "terraform/modules"]
+	path = terraform/modules
+	url = https://github.com/cjmay-dev/tf-modules
+[submodule "compose"]
+	path = compose
+	url = https://github.com/cjmay-dev/docker-compose-sidecars
+[submodule "ansible/roles"]
+	path = ansible/roles
+	url = https://github.com/cjmay-dev/ansible-roles

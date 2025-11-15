@@ -1,0 +1,92 @@
+name: Weekly Updates
+
+on:
+  schedule:
+    # Run every Sunday at 10 AM UTC
+    - cron: '0 10 * * 0'
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  update-host-and-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment:
+          - prod
+          # - staging
+    name: Update Docker Host and Images
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Ansible
+        run: |
+          pip install -r ansible/requirements.txt
+
+      - name: Request OIDC Token
+        run: |
+          echo "Requesting OIDC token..."
+          JWT=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+          echo "INFISICAL_AUTH_JWT=$JWT" >> $GITHUB_ENV
+
+      - name: Get app name and Infisical slug
+        run: |
+          repo=${{ github.repository }}
+          app=$(echo "$repo" | cut -d "/" -f 2 | sed 's/compose-//')
+          owner=$(echo "$repo" | cut -d "/" -f 1)
+          slug="${app}-${owner}"
+          if [[ "${{ matrix.environment }}" != "prod" ]]; then
+            app="${app}-${{ matrix.environment }}"
+          fi
+          echo "APP_SHORTNAME=$app" >> $GITHUB_ENV
+          echo "INFISICAL_APP_SECRETS_SLUG=$slug" >> $GITHUB_ENV
+
+      - name: Get Infisical Secrets
+        uses: Infisical/secrets-action@08d433afae6a851f9081d0563a01a55fdf96568b # v1.0.11
+        with:
+          method: "oidc"
+          domain: ${{ secrets.INFISICAL_HOST }}
+          identity-id: ${{ secrets.INFISICAL_MACHINE_IDENTITY_ID }}
+          project-slug: ${{ env.INFISICAL_APP_SECRETS_SLUG }}
+          env-slug: ${{ matrix.environment }}
+          recursive: "true"
+
+      - name: Setup Tailscale for access to DMZ
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ env.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          args: --accept-routes
+          use-cache: "true"
+
+      - name: Run Ansible update playbook
+        run: |
+          set -o pipefail
+          make update | tee update.log
+        env:
+          ANSIBLE_DISPLAY_OK_HOSTS: 'false'
+          ANSIBLE_DISPLAY_SKIPPED_HOSTS: 'false'
+          ENVIRONMENT: ${{ matrix.environment }}
+          INFISICAL_API_URL: "${{ secrets.INFISICAL_HOST }}/api"
+          INFISICAL_JWT: ${{ env.INFISICAL_JWT }}
+          INFISICAL_MACHINE_IDENTITY_ID: ${{ secrets.INFISICAL_MACHINE_IDENTITY_ID }}
+          INFISICAL_PROJECT_ID: ${{ env.INFISICAL_PROJECT_ID }}
+
+      - name: Generate job summary
+        run: |
+          echo '## Host Changes' >> $GITHUB_STEP_SUMMARY
+          echo '```console' >> $GITHUB_STEP_SUMMARY
+          cat update.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

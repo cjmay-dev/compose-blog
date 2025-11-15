@@ -1,0 +1,19 @@
+include:
+  - compose/docker-compose.infra.yaml # DO NOT REMOVE; backups + monitoring
+  - compose/docker-compose.proxy.yaml # OPTIONAL; traefik + cloudflare tunnel
+services:
+  #######
+  # App #
+  #######
+  example:
+    image: traefik/whoami:v1.11.0
+    user: "1000:1000"
+    restart: unless-stopped
+    volumes:
+      - ./volumes/example-volume:/example
+    labels:
+      # Point Cloudflare Tunnel to this service via Traefik
+      - traefik.enable=true
+      - traefik.http.routers.example.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`)
+      - traefik.http.routers.example.entrypoints=web
+      - traefik.http.services.example.loadbalancer.server.port=80   # change to your service's HTTP port
