@@ -60,9 +60,8 @@ services:
     restart: always
     labels:
       # Point Cloudflare Tunnel to this service via Traefik
-      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.ghost/activitypub`)
-      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.well-known/webfinger`)
-      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.well-known/nodeinfo`)
+      - traefik.enable=true
+      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.ghost/activitypub`) || PathPrefix(`/.well-known/webfinger`) || PathPrefix(`/.well-known/nodeinfo`)
       - traefik.http.routers.activitypub.entrypoints=web
       - traefik.http.routers.activitypub.priority=50
       - traefik.http.services.activitypub.loadbalancer.server.port=8080
@@ -84,6 +83,7 @@ services:
         condition: service_completed_successfully
     networks:
       - ghost_network
+      - default
 
   # Supporting Services
 
