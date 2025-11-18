@@ -8,9 +8,9 @@ services:
     labels:
       # Point Cloudflare Tunnel to this service via Traefik
       - traefik.enable=true
-      - traefik.http.routers.example.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`)
-      - traefik.http.routers.example.entrypoints=web
-      - traefik.http.services.example.loadbalancer.server.port=2368   # change to your service's HTTP port
+      - traefik.http.routers.ghost.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`)
+      - traefik.http.routers.ghost.entrypoints=web
+      - traefik.http.services.ghost.loadbalancer.server.port=2368   # change to your service's HTTP port
     environment:
       NODE_ENV: production
       url: https://${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}
@@ -57,8 +57,13 @@ services:
   activitypub:
     image: ghcr.io/tryghost/activitypub:1.1.0
     restart: always
-    expose:
-      - "8080"
+    labels:
+      # Point Cloudflare Tunnel to this service via Traefik
+      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.ghost/activitypub`)
+      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.well-known/webfinger`)
+      - traefik.http.routers.activitypub.rule=Host(`${APP_SHORTNAME}.${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/.well-known/nodeinfo`)
+      - traefik.http.routers.activitypub.entrypoints=web
+      - traefik.http.services.activitypub.loadbalancer.server.port=80   # change to your service's HTTP port
     volumes:
       - ./volumes/ghost:/opt/activitypub/content
     environment:
