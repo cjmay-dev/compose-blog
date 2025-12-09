@@ -20,6 +20,13 @@ services:
       database__connection__user: ${DATABASE_USER:-ghost}
       database__connection__password: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
       database__connection__database: ghost
+      mail__transport: SMTP
+      mail__options__host: smtp.mailgun.org
+      mail__options__port: 465
+      mail__options__secure: true
+      mail__options__auth__user: ${SMTP_USER:?SMTP_USER environment variable is required}
+      mail__options__auth__pass: ${SMTP_PASSWORD:?SMTP_PASSWORD environment variable is required}
+      mail__from: "'Doc\'s Office' <blog@mail.cjmay.dev>"
     volumes:
       - ./volumes/ghost:/var/lib/ghost/content
     depends_on:
