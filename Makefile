@@ -1,7 +1,8 @@
 .PHONY: clean compose configure deploy update lock tf-init tf-plan tf-apply tf-destroy
 
 compose:
-	@docker compose up -d --build --pull --force-recreate --remove-orphans
+	@docker compose pull
+	@docker compose up -d --build --force-recreate --remove-orphans
 
 update: ansible/inventory.ini ansible_ssh_private_key
 	@ansible-playbook --private-key ansible_ssh_private_key -i ansible/inventory.ini ansible/update-docker-host.yml
